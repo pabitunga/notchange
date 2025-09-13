@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FacultyJobs - Find Your Perfect Academic Position</title>
+  <link rel="stylesheet" href="style.css"/>
+
+  <!-- Firebase COMPAT SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <nav class="nav container">
+      <div class="nav__brand">
+        <h2 onclick="showPage('home')" style="cursor: pointer;">🎓 FacultyJobs</h2>
+      </div>
+      <div class="nav__menu" id="navMenu">
+        <a href="javascript:void(0)" onclick="showPage('home')" class="nav__link">Home</a>
+        <a href="javascript:void(0)" onclick="showPage('jobs')" class="nav__link">Find Jobs</a>
+        <a href="javascript:void(0)" onclick="showPage('archive')" class="nav__link">Archive</a>
+        <a href="javascript:void(0)" onclick="showPage('about')" class="nav__link">About</a>
+
+        <!-- Anonymous user buttons -->
+        <div id="anonymousNav" class="nav__auth">
+          <button class="btn btn--outline btn--sm" onclick="showPage('signin')">Sign In</button>
+          <button class="btn btn--primary btn--sm" onclick="showPage('signup')">Join Now</button>
+        </div>
+
+        <!-- Authenticated user menu -->
+        <div id="authenticatedNav" class="nav__user hidden">
+          <a href="javascript:void(0)" onclick="showPage('dashboard')" class="nav__link">Dashboard</a>
+          <!-- "Post Job" link removed in header as requested earlier -->
+          <a href="javascript:void(0)" onclick="showPage('admin')" class="nav__link nav__admin hidden">Admin</a>
+
+          <div class="user-menu">
+            <img
+              id="userPhoto"
+              src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiNmNWY1ZjUiLz4KPHN2ZwpmIGZpbGw9IiM5OTk5OTkiIGQ9Im0yMCAxNmE0IDQgMCAxIDEgMC04IDQgNCAwIDAgMSAwIDh6bTAgMmMtNC40MiAwLTggMS43OS04IDR2MmgxNnYtMmMwLTIuMjEtMy41OC00LTgtNHoiLz4KPC9zdmc+"
+              alt="User"
+              class="user-photo"
+              onclick="toggleUserDropdown()"
+            />
+            <div id="userDropdown" class="user-dropdown hidden">
+              <div class="user-info">
+                <span id="userName">User Name</span>
+                <span id="userRole" class="user-role">Candidate</span>
+              </div>
+              <button onclick="showPage('profile')" class="dropdown-item">Profile</button>
+              <button onclick="signOut()" class="dropdown-item">Sign Out</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <!-- Home Page -->
+  <div id="homePage" class="page active">
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="container">
+        <div class="hero__content">
+          <h1 class="hero__title">Find Your Dream Faculty Position</h1>
+          <p class="hero__subtitle">
+            Connect with top universities worldwide and advance your academic career with AI-powered job matching
+          </p>
+          <div class="hero__actions">
+            <button class="btn btn--primary btn--lg" onclick="showPage('jobs')">Explore Positions</button>
+            <!-- This button is role-gated in app.js -->
+            <button class="btn btn--outline btn--lg" onclick="handlePostJob()">Post a Job</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Closing Soon (dynamic; shows latest jobs near deadline, up to 6) -->
+    <section class="featured-positions">
+      <div class="container">
+        <div class="section__header">
+          <h2 class="section__title">Closing Soon</h2>
+          <p class="section__subtitle">Jobs whose application deadlines are coming up soon</p>
+        </div>
+        <div class="positions-grid" id="nearExpiryPositions"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Jobs Page -->
+  <div id="jobsPage" class="page hidden">
+    <section class="page-content">
+      <div class="container">
+        <div class="page-header">
+          <h1>Find Academic Positions</h1>
+          <p>Discover opportunities at top universities worldwide</p>
+        </div>
+
+        <div class="search-filters">
+          <div class="search-bar">
+            <input type="text" placeholder="Search positions, keywords, or institutions..." class="form-control" />
+            <button class="btn btn--primary" onclick="alert('Search functionality coming soon')">Search</button>
+          </div>
+          <div class="filters">
+            <select class="form-control">
+              <option value="">All Disciplines</option>
+              <option value="computer-science">Computer Science</option>
+              <option value="mathematics">Mathematics</option>
+              <option value="physics">Physics</option>
+              <option value="engineering">Engineering</option>
+            </select>
+            <select class="form-control">
+              <option value="">All Levels</option>
+              <option value="Assistant Professor">Assistant Professor</option>
+              <option value="Associate Professor">Associate Professor</option>
+              <option value="Full Professor">Full Professor</option>
+              <option value="Lecturer">Lecturer</option>
+            </select>
+            <select class="form-control">
+              <option value="">All Locations</option>
+              <option value="us">United States</option>
+              <option value="canada">Canada</option>
+              <option value="uk">United Kingdom</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="jobs-results">
+          <div class="results-header">
+            <h3>All Positions</h3>
+            <span class="results-count">Live jobs from universities</span>
+          </div>
+          <div class="positions-grid" id="allPositions"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Archive Page (expired jobs) -->
+  <div id="archivePage" class="page hidden">
+    <section class="page-content">
+      <div class="container">
+        <div class="page-header">
+          <h1>Archive</h1>
+          <p>Expired positions</p>
+        </div>
+        <div class="positions-grid" id="archivePositions"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Sign Up Page -->
+  <div id="signupPage" class="page hidden">
+    <section class="auth-page">
+      <div class="container">
+        <div class="auth-card">
+          <h1>Join FacultyJobs</h1>
+          <p>Create your account and start your academic career journey</p>
+
+          <form id="signupForm" class="auth-form">
+            <div class="form-group">
+              <label class="form-label">Profile Photo (Optional)</label>
+              <div class="photo-upload">
+                <input type="file" id="photoUpload" accept="image/*" class="photo-input hidden" />
+                <div class="photo-preview" onclick="document.getElementById('photoUpload').click()">
+                  <img id="photoPreview" src="" alt="" class="hidden" />
+                  <div id="photoPlaceholder" class="photo-placeholder">
+                    <span>📷</span>
+                    <p>Click to upload photo</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Full Name</label>
+              <input type="text" id="signupName" class="form-control" required />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Email</label>
+              <input type="email" id="signupEmail" class="form-control" required />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Password</label>
+              <input type="password" id="signupPassword" class="form-control" required />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Role</label>
+              <select id="signupRole" class="form-control" required>
+                <option value="CANDIDATE">Academic Job Seeker</option>
+                <option value="EMPLOYER">University/Institution</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Institution/Affiliation (Optional)</label>
+              <input type="text" id="signupInstitution" class="form-control" />
+            </div>
+
+            <button type="submit" class="btn btn--primary btn--full-width">Create Account</button>
+          </form>
+
+          <div class="auth-footer">
+            <p>Already have an account? <a href="javascript:void(0)" onclick="showPage('signin')">Sign in</a></p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Sign In Page -->
+  <div id="signinPage" class="page hidden">
+    <section class="auth-page">
+      <div class="container">
+        <div class="auth-card">
+          <h1>Welcome Back</h1>
+          <p>Sign in to your FacultyJobs account</p>
+
+          <form id="signinForm" class="auth-form">
+            <div class="form-group">
+              <label class="form-label">Email</label>
+              <input type="email" id="signinEmail" class="form-control" required />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Password</label>
+              <input type="password" id="signinPassword" class="form-control" required />
+            </div>
+
+            <button type="submit" class="btn btn--primary btn--full-width">Sign In</button>
+          </form>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Dashboard Page -->
+  <div id="dashboardPage" class="page hidden">
+    <section class="dashboard">
+      <div class="container">
+        <div class="dashboard-header">
+          <h1>Dashboard</h1>
+          <p>Manage your academic career</p>
+        </div>
+
+        <div class="dashboard-grid">
+          <div class="dashboard-card">
+            <h3>Profile Completion</h3>
+            <div class="progress-bar">
+              <div class="progress-fill" style="width: 75%"></div>
+            </div>
+            <p>75% Complete</p>
+            <button class="btn btn--secondary" onclick="showPage('profile')">Complete Profile</button>
+          </div>
+
+          <div class="dashboard-card">
+            <h3>Applications</h3>
+            <div class="stat-number">3</div>
+            <p>Active Applications</p>
+            <button class="btn btn--secondary" onclick="alert('View Applications coming soon')">View Applications</button>
+          </div>
+
+          <div class="dashboard-card">
+            <h3>Saved Jobs</h3>
+            <div class="stat-number">8</div>
+            <p>Positions Saved</p>
+            <button class="btn btn--secondary" onclick="alert('View Saved coming soon')">View Saved</button>
+          </div>
+
+          <div class="dashboard-card">
+            <h3>Job Alerts</h3>
+            <div class="stat-number">5</div>
+            <p>Active Alerts</p>
+            <button class="btn btn--secondary" onclick="alert('Manage Alerts coming soon')">Manage Alerts</button>
+          </div>
+        </div>
+
+        <div class="recent-activity">
+          <h2>Recent Activity</h2>
+          <div class="activity-list">
+            <div class="activity-item">
+              <div class="activity-icon">📄</div>
+              <div class="activity-content">
+                <p><strong>Applied to Professor of Computer Science</strong> at Stanford University</p>
+                <span class="activity-time">2 days ago</span>
+              </div>
+            </div>
+            <div class="activity-item">
+              <div class="activity-icon">⭐</div>
+              <div class="activity-content">
+                <p><strong>Saved</strong> Associate Professor of Mathematics at MIT</p>
+                <span class="activity-time">1 week ago</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div id="postJobPage" class="page hidden">
+  <section class="post-job">
+    <div class="container">
+      <div class="page-header">
+        <h1>Post a New Position</h1>
+        <p>Find the perfect candidate for your institution</p>
+      </div>
+
+      <form id="postJobForm" class="post-job-form two-col-form">
+        <!-- ============ Two Column Grid ============ -->
+        <div class="form-grid two-col">
+
+          <!-- Position Title -->
+          <div class="form-group">
+            <label for="postTitle" class="form-label">Position Title</label>
+            <input type="text" id="postTitle" class="form-control" required placeholder="e.g., Assistant Professor — Computer Science">
+            <div class="helper-text">Manual entry; clear and specific title.</div>
+          </div>
+
+          <!-- Institution Type -->
+          <div class="form-group">
+            <label for="postInstitutionType" class="form-label">Institution Type</label>
+            <input type="text" id="postInstitutionType" class="form-control" placeholder="e.g., Government, Private, Central">
+            <div class="helper-text">Manual entry (hint: govt, private, central).</div>
+          </div>
+
+          <!-- Departments (multi-select) -->
+          <div class="form-group">
+            <label for="postDepartments" class="form-label">Department(s)</label>
+            <select id="postDepartments" class="form-control" multiple size="8" required>
+              <option value="Computer Science">Computer Science</option>
+              <option value="Mathematics">Mathematics</option>
+              <option value="Physics">Physics</option>
+              <option value="Chemistry">Chemistry</option>
+              <option value="Biology">Biology</option>
+              <option value="Electrical Engineering">Electrical Engineering</option>
+              <option value="Mechanical Engineering">Mechanical Engineering</option>
+              <option value="Civil Engineering">Civil Engineering</option>
+              <option value="Humanities">Humanities</option>
+              <option value="Economics">Economics</option>
+              <option value="Management">Management</option>
+              <option value="Law">Law</option>
+              <option value="Medical Sciences">Medical Sciences</option>
+              <option value="Interdisciplinary">Interdisciplinary</option>
+              <option value="Other">Other</option>
+            </select>
+            <div class="helper-text">Hold Ctrl/Cmd (or drag) to select multiple departments.</div>
+          </div>
+
+          <!-- Position Levels (multi-select) -->
+          <div class="form-group">
+            <label for="postLevels" class="form-label">Position Level(s)</label>
+            <select id="postLevels" class="form-control" multiple size="8" required>
+              <option value="Assistant Professor">Assistant Professor</option>
+              <option value="Associate Professor">Associate Professor</option>
+              <option value="Professor">Professor</option>
+              <option value="Post DOC">Post DOC</option>
+              <option value="JRF">JRF</option>
+              <option value="Project Fellow">Project Fellow</option>
+              <option value="Leadership Role">Leadership Role</option>
+              <option value="Non-Academic">Non-Academic</option>
+              <option value="Others">Others</option>
+            </select>
+            <div class="helper-text">You can recruit for multiple levels in one post.</div>
+          </div>
+
+          <!-- Description -->
+          <div class="form-group col-span-2">
+            <label for="postDescription" class="form-label">Description</label>
+            <textarea id="postDescription" class="form-control" rows="6" required
+              placeholder="Write about the job in detail: responsibilities, required qualifications, desirable skills, how to apply, selection process, and contact info."></textarea>
+          </div>
+
+          <!-- Institution Name -->
+          <div class="form-group">
+            <label for="postInstitution" class="form-label">Institution Name</label>
+            <input type="text" id="postInstitution" class="form-control" required placeholder="e.g., IIT Patna">
+            <div class="helper-text">Manual entry (example shown).</div>
+          </div>
+
+          <!-- Location -->
+          <div class="form-group">
+            <label for="postLocation" class="form-label">Location</label>
+            <input type="text" id="postLocation" class="form-control" required placeholder="e.g., Mumbai, India">
+            <div class="helper-text">Manual entry (example shown).</div>
+          </div>
+
+          <!-- Application Link -->
+          <div class="form-group">
+            <label for="postApplyLink" class="form-label">Application Link</label>
+            <input type="url" id="postApplyLink" class="form-control" placeholder="Paste the official advertisement or application link">
+            <div class="helper-text">Provide appropriate link of ad (optional).</div>
+          </div>
+
+          <!-- Salary Range -->
+          <div class="form-group">
+            <label for="postSalary" class="form-label">Salary Range</label>
+            <input type="text" id="postSalary" class="form-control" placeholder="e.g., ₹10 LPA – ₹25 LPA">
+            <div class="helper-text">Example shown; optional.</div>
+          </div>
+
+          <!-- Deadline -->
+          <div class="form-group">
+            <label for="postDeadline" class="form-label">Application Deadline</label>
+            <input type="date" id="postDeadline" class="form-control" required>
+            <div class="helper-text">Select from calendar (we’ll format it as dd/mm/yyyy in the UI).</div>
+          </div>
+
+          <!-- Image Upload -->
+          <div class="form-group">
+            <label for="postJobImage" class="form-label">Attach an Image (optional)</label>
+            <input type="file" id="postJobImage" accept="image/*" class="form-control">
+            <div class="helper-text">Add a poster/banner. Large images are automatically resized.</div>
+            <div class="photo-preview" style="margin-top:8px;">
+              <img id="postJobImagePreview" src="" alt="" class="hidden" style="max-height:180px;border-radius:12px;">
+            </div>
+          </div>
+
+        </div>
+
+        <button type="submit" class="btn btn--primary btn--lg" style="margin-top:12px;">Post Position</button>
+      </form>
+    </div>
+  </section>
+</div>
+
+
+  <!-- Admin Page -->
+  <div id="adminPage" class="page hidden">
+    <section class="admin">
+      <div class="container">
+        <div class="page-header">
+          <h1>Admin Dashboard</h1>
+          <p>System management and oversight</p>
+        </div>
+
+        <div class="admin-grid">
+          <div class="admin-card">
+            <h3>Users</h3>
+            <div class="stat-number">1,247</div>
+            <p>Total Users</p>
+            <button class="btn btn--secondary" onclick="alert('User management coming soon')">Manage Users</button>
+          </div>
+
+          <div class="admin-card">
+            <h3>Positions</h3>
+            <div class="stat-number">89</div>
+            <p>Active Positions</p>
+            <button class="btn btn--secondary" onclick="alert('Position management coming soon')">Manage Positions</button>
+          </div>
+
+          <div class="admin-card">
+            <h3>Applications</h3>
+            <div class="stat-number">342</div>
+            <p>Total Applications</p>
+            <button class="btn btn--secondary" onclick="alert('Application management coming soon')">View Applications</button>
+          </div>
+
+          <div class="admin-card">
+            <h3>Reports</h3>
+            <div class="stat-number">12</div>
+            <p>Generated Today</p>
+            <button class="btn btn--secondary" onclick="alert('Reports coming soon')">View Reports</button>
+          </div>
+        </div>
+
+        <!-- Pending Jobs moderation (filled by app.js for ADMIN) -->
+        <div class="form-section" style="margin-top:16px;">
+          <h2>Pending Jobs</h2>
+          <p class="section__subtitle">Approve or reject jobs submitted by users.</p>
+          <div id="pendingJobsList" class="positions-grid"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- About Page -->
+  <div id="aboutPage" class="page hidden">
+    <section class="about">
+      <div class="container">
+        <div class="page-header">
+          <h1>About FacultyJobs</h1>
+          <p>Connecting academia worldwide</p>
+        </div>
+
+        <div class="about-content">
+          <div class="about-section">
+            <h2>Our Mission</h2>
+            <p>
+              FacultyJobs is dedicated to connecting talented academics with prestigious institutions worldwide.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Profile Page -->
+  <div id="profilePage" class="page hidden">
+    <section class="profile">
+      <div class="container">
+        <div class="page-header">
+          <h1>Profile</h1>
+          <p>Manage your account information</p>
+        </div>
+
+        <form id="profileForm" class="profile-form">
+          <div class="profile-photo-section">
+            <div class="current-photo">
+              <img
+                id="currentPhoto"
+                src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjUwIiBmaWxsPSIjZjVmNWY1Ii8+PC9zdmc+"
+                alt="Profile Photo"
+              />
+            </div>
+            <div class="photo-controls">
+              <input type="file" id="profilePhotoUpload" accept="image/*" class="hidden" />
+              <button type="button" onclick="document.getElementById('profilePhotoUpload').click()" class="btn btn--secondary">Change Photo</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Full Name</label>
+            <input type="text" id="profileName" class="form-control" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input type="email" id="profileEmail" class="form-control" readonly />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Institution/Affiliation</label>
+            <input type="text" id="profileInstitution" class="form-control" />
+          </div>
+
+          <button type="submit" class="btn btn--primary">Save Changes</button>
+        </form>
+      </div>
+    </section>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer__content">
+        <div class="footer__brand">
+          <h3>🎓 FacultyJobs</h3>
+          <p>Connecting academia worldwide</p>
+        </div>
+        <div class="footer__links">
+          <div class="footer__column">
+            <h4>For Faculty</h4>
+            <a href="javascript:void(0)" onclick="showPage('jobs')">Browse Jobs</a>
+            <a href="javascript:void(0)" onclick="showPage('archive')">Archived Jobs</a>
+          </div>
+          <div class="footer__column">
+            <h4>For Universities</h4>
+            <a href="javascript:void(0)" onclick="handlePostJob()">Post Jobs</a>
+            <a href="javascript:void(0)" onclick="alert('Recruiting Solutions coming soon!')">Recruiting Solutions</a>
+          </div>
+          <div class="footer__column">
+            <h4>Support</h4>
+            <a href="javascript:void(0)" onclick="alert('Help Center coming soon!')">Help Center</a>
+            <a href="javascript:void(0)" onclick="alert('Contact Us: support@facultyjobs.com')">Contact Us</a>
+          </div>
+        </div>
+      </div>
+      <div class="footer__bottom">
+        <p>&copy; 2025 FacultyJobs. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Non-blocking messages -->
+<div id="toastHost" class="toast-host"></div>
+  
+  <!-- App JS (must be last) -->
+  <script src="app.js"></script>
+</body>
+</html>
