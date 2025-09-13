@@ -14,15 +14,16 @@
 /* -------- Firebase Init (compat) -------- */
 (function initFirebase() {
   // Your NEW config
-  const firebaseConfig = {
-    apiKey: "AIzaSyCBQfwpbnDdPPl0LdeXPWAc_o-Nd67EnsY",
-    authDomain: "jobs-ff5a9.firebaseapp.com",
-    projectId: "jobs-ff5a9",
-    storageBucket: "jobs-ff5a9.firebasestorage.app",
-    messagingSenderId: "110232650978",
-    appId: "1:110232650978:web:64c20408089e75487f8abb",
-    measurementId: "G-WW68CSEMM6"
-  };
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyCBQfwpbnDdPPl0LdeXPWAc_o-Nd67EnsY",
+  authDomain: "jobs-ff5a9.firebaseapp.com",
+  projectId: "jobs-ff5a9",
+  storageBucket: "jobs-ff5a9.firebasestorage.app",
+  messagingSenderId: "110232650978",
+  appId: "1:110232650978:web:5db3690656cebec37f8abb",
+  measurementId: "G-86JGB6073W"
+};
 
   try {
     if (window.firebase && window.firebase.initializeApp) {
